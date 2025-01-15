@@ -3,12 +3,12 @@ import pytest
 
 from itertools import permutations
 
-from sweetpea import fully_cross_block
-from sweetpea.blocks import Block
-from sweetpea.primitives import Factor, DerivedLevel, WithinTrial, Transition
-from sweetpea.constraints import Consistency, FullyCross, Derivation, AtMostKInARow
-from sweetpea.backend import LowLevelRequest, BackendRequest
-from sweetpea.logic import And, Or, Iff, to_cnf_tseitin
+from sweetpea import CrossBlock
+from sweetpea._internal.block import Block
+from sweetpea._internal.primitive import Factor, DerivedLevel, WithinTrial, Transition
+from sweetpea._internal.constraint import Consistency, Cross, Derivation, AtMostKInARow, Reify
+from sweetpea._internal.backend import LowLevelRequest, BackendRequest
+from sweetpea._internal.logic import And, Or, Iff, to_cnf_tseitin
 
 
 color  = Factor("color",  ["red", "blue"])
@@ -27,9 +27,9 @@ congruency = Factor("congruency", [
     DerivedLevel("inc", WithinTrial(color_motion_incongruent, [color, motion]))
 ])
 
-block = fully_cross_block([congruency, color, motion, task],
-                          [color, motion, task],
-                          [])
+block = CrossBlock([congruency, color, motion, task],
+                   [color, motion, task],
+                   [Reify(congruency)])
 
 
 def test_fully_cross_with_three_factors():
@@ -45,19 +45,19 @@ def test_fully_cross_with_three_factors():
     ]), 129)
 
     backend_request = BackendRequest(65)
-    FullyCross.apply(block, backend_request)
+    Cross.apply(block, backend_request)
 
     assert backend_request.fresh == 258
     assert backend_request.cnfs == [expected_cnf]
     assert backend_request.ll_requests == [
-        LowLevelRequest("GT", 0, [65, 73, 81, 89, 97,  105, 113, 121]),
-        LowLevelRequest("GT", 0, [66, 74, 82, 90, 98,  106, 114, 122]),
-        LowLevelRequest("GT", 0, [67, 75, 83, 91, 99,  107, 115, 123]),
-        LowLevelRequest("GT", 0, [68, 76, 84, 92, 100, 108, 116, 124]),
-        LowLevelRequest("GT", 0, [69, 77, 85, 93, 101, 109, 117, 125]),
-        LowLevelRequest("GT", 0, [70, 78, 86, 94, 102, 110, 118, 126]),
-        LowLevelRequest("GT", 0, [71, 79, 87, 95, 103, 111, 119, 127]),
-        LowLevelRequest("GT", 0, [72, 80, 88, 96, 104, 112, 120, 128])
+        LowLevelRequest("EQ", 1, [65, 73, 81, 89, 97,  105, 113, 121]),
+        LowLevelRequest("EQ", 1, [66, 74, 82, 90, 98,  106, 114, 122]),
+        LowLevelRequest("EQ", 1, [67, 75, 83, 91, 99,  107, 115, 123]),
+        LowLevelRequest("EQ", 1, [68, 76, 84, 92, 100, 108, 116, 124]),
+        LowLevelRequest("EQ", 1, [69, 77, 85, 93, 101, 109, 117, 125]),
+        LowLevelRequest("EQ", 1, [70, 78, 86, 94, 102, 110, 118, 126]),
+        LowLevelRequest("EQ", 1, [71, 79, 87, 95, 103, 111, 119, 127]),
+        LowLevelRequest("EQ", 1, [72, 80, 88, 96, 104, 112, 120, 128])
     ]
 
 

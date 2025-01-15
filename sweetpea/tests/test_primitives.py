@@ -1,7 +1,8 @@
 import operator as op
 import pytest
 
-from sweetpea.primitives import Factor, DerivedLevel, ElseLevel, WithinTrial, Transition, Window
+from sweetpea import Factor, DerivedLevel, ElseLevel, WithinTrial, Transition, Window, Level, CrossBlock
+from sweetpea import synthesize_trials, RandomGen
 
 color = Factor("color", ["red", "blue"])
 text = Factor("text", ["red", "blue"])
@@ -28,15 +29,6 @@ def test_factor_validation():
     Factor("factor name", ["level 1", "level 2"])
     Factor("name", [1, 2])
 
-    # Duplicated name
-    with pytest.raises(ValueError):
-        Factor("name", ["a", "b", "a"])
-    with pytest.raises(ValueError):
-        Factor("name", [
-            DerivedLevel("a", WithinTrial(op.eq, [color, text])),
-            ElseLevel("a")
-        ])
-
     # Non-string name
     with pytest.raises(ValueError):
         Factor(56, ["level "])
@@ -48,6 +40,12 @@ def test_factor_validation():
     # Empty list
     with pytest.raises(ValueError):
         Factor("name", [])
+
+    # Duplicate level names
+    with pytest.raises(ValueError):
+        Factor("name", ["level1", "level1"])
+    with pytest.raises(ValueError):
+        Factor("name", [Level("level1"), Level("level1")])
 
     # Valid level types, but not uniform.
     with pytest.raises(ValueError):
@@ -72,11 +70,6 @@ def test_factor_get_level():
     assert color['red'].name == 'red'
     assert color_repeats_factor['yes'] == color_repeats_level
     assert color.get_level("bogus") is None
-
-
-def test_factor_is_derived():
-    assert color.is_derived() == False
-    assert con_factor.is_derived() == True
 
 
 def test_factor_has_complex_window():
@@ -117,9 +110,9 @@ def test_derived_level_validation():
         DerivedLevel("name", 42)
 
 def test_derived_level_argument_list_expansion():
-    # We should internally duplicate each factor to match the width of the window.
-    assert color_repeats_level.window.args == [color, color]
-    assert color_no_repeat_level.window.args == [color, color]
+    # Used to internally duplicate each factor to match the width of the window, but not any more
+    assert color_repeats_level.window.factors == [color]
+    assert color_no_repeat_level.window.factors == [color]
 
 
 def test_derived_level_get_dependent_cross_product():
@@ -218,3 +211,33 @@ def test_base_window_validation():
     # Duplicated factors
     with pytest.raises(ValueError):
         DerivedLevel("name", WithinTrial(lambda x, y: x, [color, color]))
+
+def test_non_string_level_names():
+    number = Factor('number', [1, 2])
+
+    assert number[1].name == 1
+    assert number[1] == number.get_level(1)
+
+    assert number[2].name == 2
+    assert number[2] == number.get_level(2)
+
+    numbers = Factor('numbers', [(1, 2), (3, 4), (5, 6, 7)])
+
+    assert numbers[(1, 2)].name == (1, 2)
+    assert numbers[(1, 2)] == numbers.get_level((1, 2))
+
+    assert numbers[(3, 4)].name == (3, 4)
+    assert numbers[(5, 6, 7)].name == (5, 6, 7)
+
+    # Make sure non-string names are supplied to derived-level predicates
+    
+    def is_one(n): return n == 1
+    def is_two(n): return n == 2
+
+    one = DerivedLevel('one', WithinTrial(is_one, [number]))
+    two = DerivedLevel('two', WithinTrial(is_two, [number]))
+
+    derived = Factor("derived", [one,two])
+    t = synthesize_trials(CrossBlock([number, derived], [derived], []), 1, RandomGen)
+    assert len(t) == 1
+    

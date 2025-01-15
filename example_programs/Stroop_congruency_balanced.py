@@ -2,10 +2,11 @@
 import sys
 sys.path.append("..")
 
-from sweetpea.primitives import Factor, DerivedLevel, WithinTrial, Transition
-from sweetpea.constraints import at_most_k_in_a_row
-from sweetpea import fully_cross_block, synthesize_trials_non_uniform, print_experiments
-
+from sweetpea import (
+    Factor, DerivedLevel, WithinTrial, Transition, AtMostKInARow,
+    CrossBlock, synthesize_trials, print_experiments,
+    CMSGen
+)
 
 """
 Stroop Task
@@ -67,7 +68,7 @@ response = Factor("response", [
 # DEFINE RESPONSE Transition FACTOR
 
 def response_repeat(response):
-    return response[0] == response[1]
+    return response[0] == response[-1]
 
 def response_switch(response):
     return not response_repeat(response)
@@ -80,16 +81,16 @@ resp_transition = Factor("response_transition", [
 # DEFINE SEQUENCE CONSTRAINTS
 
 k = 7
-constraints = [at_most_k_in_a_row(k, resp_transition)]
+constraints = [AtMostKInARow(k, resp_transition)]
 
 # DEFINE EXPERIMENT
 
 design       = [color, word, congruency, resp_transition, response]
 crossing     = [color, congruency, resp_transition]
-block        = fully_cross_block(design, crossing, constraints)
+block        = CrossBlock(design, crossing, constraints)
 
 # SOLVE
 
-experiments  = synthesize_trials_non_uniform(block, 5)
+experiments  = synthesize_trials(block, 5, CMSGen)
 
 print_experiments(block, experiments)

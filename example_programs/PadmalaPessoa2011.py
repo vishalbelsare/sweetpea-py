@@ -2,9 +2,11 @@
 import sys
 sys.path.append("..")
 
-from sweetpea.primitives import Factor, DerivedLevel, WithinTrial, Transition
-from sweetpea.constraints import at_most_k_in_a_row
-from sweetpea import fully_cross_block, synthesize_trials_non_uniform, print_experiments
+from sweetpea import (
+    Factor, DerivedLevel, WithinTrial, Transition,
+    CrossBlock, synthesize_trials, print_experiments,
+    CMSGen, IterateGen, RandomGen
+)
 
 
 """
@@ -31,23 +33,23 @@ congruency  = Factor("congruency",  ["congruent", "incongruent", "neutral"])
 # DEFINE CONGRUENCY TRANSITION FACTOR
 
 def con_con(congruency):
-    return congruency[0] == "congruent" and congruency[1] == "congruent"
+    return congruency[-1] == "congruent" and congruency[0] == "congruent"
 def con_inc(congruency):
-    return congruency[0] == "congruent" and congruency[1] == "incongruent"
+    return congruency[-1] == "congruent" and congruency[0] == "incongruent"
 def con_ntr(congruency):
-    return congruency[0] == "congruent" and congruency[1] == "neutral"
+    return congruency[-1] == "congruent" and congruency[0] == "neutral"
 def inc_con(congruency):
-    return congruency[0] == "incongruent" and congruency[1] == "congruent"
+    return congruency[-1] == "incongruent" and congruency[0] == "congruent"
 def inc_inc(congruency):
-    return congruency[0] == "incongruent" and congruency[1] == "incongruent"
+    return congruency[-1] == "incongruent" and congruency[0] == "incongruent"
 def inc_ntr(congruency):
-    return congruency[0] == "incongruent" and congruency[1] == "neutral"
+    return congruency[-1] == "incongruent" and congruency[0] == "neutral"
 def ntr_con(congruency):
-    return congruency[0] == "neutral" and congruency[1] == "congruent"
+    return congruency[-1] == "neutral" and congruency[0] == "congruent"
 def ntr_inc(congruency):
-    return congruency[0] == "neutral" and congruency[1] == "incongruent"
+    return congruency[-1] == "neutral" and congruency[0] == "incongruent"
 def ntr_ntr(congruency):
-    return congruency[0] == "neutral" and congruency[1] == "neutral"
+    return congruency[-1] == "neutral" and congruency[0] == "neutral"
 
 
 congruency_transition = Factor("congruency_transition", [
@@ -65,7 +67,7 @@ congruency_transition = Factor("congruency_transition", [
 # DEFINE RESPONSE TRANSITION FACTOR
 
 def response_repeat(responses):
-    return responses[0] == responses[1]
+    return responses[-1] == responses[0]
 
 def response_switch(responses):
     return not response_repeat(responses)
@@ -83,10 +85,13 @@ constraints = []
 
 design       = [congruency, reward, response, congruency_transition, response_transition]
 crossing     = [reward, response, congruency_transition, response_transition]
-block        = fully_cross_block(design, crossing, constraints)
+block        = CrossBlock(design, crossing, constraints)
 
 # SOLVE
 
-experiments  = synthesize_trials_non_uniform(block, 5)
+experiments  = synthesize_trials(block, 5, CMSGen)
+# Or:
+# experiments  = synthesize_trials(block, 5, IterateGen)
+# experiments  = synthesize_trials(block, 5, RandomGen(acceptable_error = 15))
 
 print_experiments(block, experiments)

@@ -1,11 +1,8 @@
 import operator as op
 import pytest
 
-from sweetpea.primitives import Factor, DerivedLevel, WithinTrial, Transition
-from sweetpea.constraints import at_most_k_in_a_row, exactly_k_in_a_row
-from sweetpea.sampling_strategies.guided import GuidedSamplingStrategy
-from sweetpea import fully_cross_block, synthesize_trials
-from sweetpea.tests.test_utils import get_level_from_name
+from sweetpea import *
+from sweetpea._internal.sampling_strategy.guided import GuidedGen
 
 # Basic setup
 color_list = ["red", "blue"]
@@ -21,10 +18,10 @@ design      = [color, text, con_factor]
 crossing    = [color, text]
 constraints = []
 
-block = fully_cross_block(design, crossing, constraints)
+block = CrossBlock(design, crossing, constraints)
 
 
 def test_guided_sampling_works():
-    trials = synthesize_trials(block, 5, sampling_strategy=GuidedSamplingStrategy)
+    trials = synthesize_trials(block, 5, sampling_strategy=GuidedGen)
 
     assert len(trials) == 5
